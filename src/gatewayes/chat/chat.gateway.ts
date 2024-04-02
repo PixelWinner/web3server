@@ -7,7 +7,7 @@ import * as process from "process";
 import { Web3 } from "web3";
 
 
-@WebSocketGateway(5000, {
+@WebSocketGateway(Number(process.env.WEB_SOCKET_PORT), {
     cors: "*:*"
 })
 export class ChatGateway {
