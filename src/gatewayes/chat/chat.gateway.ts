@@ -47,7 +47,7 @@ export class ChatGateway {
         const txIds: string[] = this.extractTxIds(userMessage.text);
 
         const transactions = await this.getTxIdsInfo(txIds);
-        console.log(transactions);
+
         const message: TMessage = {
             id: v4(),
             sender: userMessage.userName,
@@ -92,13 +92,14 @@ export class ChatGateway {
     private async getTxInfo(txId: string): Promise<Transaction> {
         const transaction = await this.web3.eth.getTransaction(txId);
         const block = await this.web3.eth.getBlock(transaction.blockNumber);
+        const valueInEther = this.web3.utils.fromWei(transaction.value, "ether");
 
         return {
             txId,
             from: transaction.from,
             to: transaction.to,
             date: new Date(Number(block.timestamp) * 1000),
-            v: Number(transaction.v)
+            value: valueInEther
         };
     }
 }

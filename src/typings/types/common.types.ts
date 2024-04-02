@@ -27,5 +27,5 @@ export type Transaction = {
     from: string,
     to: string,
     date: Date
-    v: number
+    value: string
 }
