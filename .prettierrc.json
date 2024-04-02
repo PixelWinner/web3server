@@ -1,0 +1,13 @@
+{
+    "semi": true,
+    "tabWidth": 4,
+    "printWidth": 160,
+    "singleQuote": false,
+    "trailingComma": "none",
+    "endOfLine": "crlf",
+    "plugins": [    ],
+    "arrowParens": "always",
+    "importOrderSeparation": true,
+    "importOrderSortSpecifiers": true,
+    "importOrderGroupNamespaceSpecifiers": true
+}
