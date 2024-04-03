@@ -7,7 +7,7 @@ import * as process from "process";
 import { Web3 } from "web3";
 
 
-@WebSocketGateway(Number(process.env.WEB_SOCKET_PORT), {
+@WebSocketGateway(5000, {
     cors: "*:*"
 })
 export class ChatGateway {
@@ -20,6 +20,7 @@ export class ChatGateway {
     handleJoin(@MessageBody() data: JoinData) {
         const message: TMessage = {
             id: v4(),
+            userId: v4(),
             sender: "System",
             chatId: data.chatId,
             type: MessageType.SYSTEM,
@@ -43,17 +44,19 @@ export class ChatGateway {
     }
 
     @SubscribeMessage(EventType.MESSAGE)
-    async handleChatMessage(@MessageBody() userMessage: UserMessage) {
-        const txIds: string[] = this.extractTxIds(userMessage.text);
+    async handleChatMessage(@MessageBody() { userName, userId, chatId, text }: UserMessage) {
+
+        const txIds: string[] = this.extractTxIds(text);
 
         const transactions = await this.getTxIdsInfo(txIds);
 
         const message: TMessage = {
             id: v4(),
-            sender: userMessage.userName,
+            userId,
+            sender: userName,
             type: MessageType.USER,
-            text: userMessage.text,
-            chatId: userMessage.chatId,
+            text,
+            chatId,
             transactions
         };
 
