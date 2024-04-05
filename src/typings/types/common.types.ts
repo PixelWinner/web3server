@@ -11,7 +11,6 @@ export type TMessage = {
 }
 
 export type UserMessage = {
-    userId: string;
     text: string;
     userName: string;
     chatId: string
