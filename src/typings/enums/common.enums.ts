@@ -6,5 +6,6 @@ export enum MessageType {
 export enum EventType {
     JOIN = "join",
     MESSAGE = "message",
-    LOAD_MESSAGES ="loadMessages"
+    LOAD_MESSAGES ="loadMessages",
+    LOAD_USER_ID = "loadUserId"
 }

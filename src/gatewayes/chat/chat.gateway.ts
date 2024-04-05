@@ -16,6 +16,11 @@ export class ChatGateway {
     private chats: Chats = {};
     private web3 = new Web3(`https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`);
 
+
+    handleConnection(client: Socket) {
+        client.emit(EventType.LOAD_USER_ID, client.id);
+    }
+
     @SubscribeMessage(EventType.JOIN)
     handleJoin(@MessageBody() data: JoinData) {
         const message: TMessage = {
@@ -45,7 +50,6 @@ export class ChatGateway {
 
     @SubscribeMessage(EventType.MESSAGE)
     async handleChatMessage(@MessageBody() { userName, userId, chatId, text }: UserMessage) {
-
         const txIds: string[] = this.extractTxIds(text);
 
         const transactions = await this.getTxIdsInfo(txIds);
