@@ -1,7 +1,7 @@
 import { ConnectedSocket, MessageBody, SubscribeMessage, WebSocketGateway, WebSocketServer } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { EventType, MessageType } from "../../typings/enums/common.enums";
-import { Chats, JoinData, TMessage, Transaction, UserMessage } from "../../typings/types/common.types";
+import { Chats, JoinData, TMessage, Transaction, User, UserMessage, UsersMap } from "../../typings/types/common.types";
 import { v4 } from "uuid";
 import * as process from "process";
 import { Web3 } from "web3";
@@ -13,6 +13,7 @@ import { Web3 } from "web3";
 export class ChatGateway {
     @WebSocketServer() server: Server;
 
+    private users: UsersMap = new Map();
     private chats: Chats = {};
     private web3 = new Web3(`https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`);
 
@@ -21,35 +22,61 @@ export class ChatGateway {
         client.emit(EventType.LOAD_USER_ID, client.id);
     }
 
+    handleDisconnect(client: Socket) {
+        this.removeUser(client.id);
+    }
+
     @SubscribeMessage(EventType.JOIN)
-    handleJoin(@MessageBody() data: JoinData) {
+    handleJoin(@MessageBody() data: JoinData, @ConnectedSocket() client: Socket) {
+        const { chatId, userName } = data;
+        const user = { id: client.id, userName, chatId };
+
+        this.addUser(user);
+
         const message: TMessage = {
             id: v4(),
             userId: v4(),
             sender: "System",
-            chatId: data.chatId,
             type: MessageType.SYSTEM,
             text: `${data.userName} has joined the chat!`,
             transactions: []
         };
 
-        if (!this.chats[data.chatId]) {
-            this.chats[data.chatId] = [message];
+        if (!this.chats[chatId]) {
+            this.chats[chatId] = [message];
         } else {
-            this.chats[data.chatId].push(message);
+            this.chats[chatId].push(message);
         }
 
-        this.server.to(data.chatId).emit(EventType.MESSAGE, message);
+        this.server.to(chatId).emit(EventType.MESSAGE, message);
+    }
+
+    @SubscribeMessage(EventType.LEAVE)
+    handleLeave(@ConnectedSocket() client: Socket) {
+        this.removeUser(client.id);
     }
 
     @SubscribeMessage(EventType.LOAD_MESSAGES)
-    handleLoadMessages(@MessageBody() chatId: string, @ConnectedSocket() client: Socket) {
-        client.join(chatId);
-        client.emit(EventType.LOAD_MESSAGES, this.chats[chatId] ?? []);
+    handleLoadMessages(@ConnectedSocket() client: Socket) {
+        const user = this.findUserById(client.id);
+
+        if (!user.chatId) {
+            return;
+        }
+
+        client.join(user.chatId);
+        client.emit(EventType.LOAD_MESSAGES, this.chats[user.chatId] ?? []);
     }
 
     @SubscribeMessage(EventType.MESSAGE)
-    async handleChatMessage(@MessageBody() { userName, chatId, text }: UserMessage, @ConnectedSocket() client: Socket) {
+    async handleChatMessage(@MessageBody() userMessage: UserMessage, @ConnectedSocket() client: Socket) {
+        const { text } = userMessage;
+        const user = this.findUserById(client.id);
+
+        if (!user?.chatId) {
+            return;
+        }
+
         const txIds: string[] = this.extractTxIds(text);
 
         const transactions = await this.getTxIdsInfo(txIds);
@@ -57,20 +84,19 @@ export class ChatGateway {
         const message: TMessage = {
             id: v4(),
             userId: client.id,
-            sender: userName,
+            sender: user.userName,
             type: MessageType.USER,
             text,
-            chatId,
             transactions
         };
 
-        if (!this.chats[message.chatId]) {
-            this.chats[message.chatId] = [message];
+        if (!this.chats[user.chatId]) {
+            this.chats[user.chatId] = [message];
         } else {
-            this.chats[message.chatId].push(message);
+            this.chats[user.chatId].push(message);
         }
 
-        this.server.to(message.chatId).emit(EventType.MESSAGE, message);
+        this.server.to(user.chatId).emit(EventType.MESSAGE, message);
     }
 
     private extractTxIds(text: string): string[] {
@@ -109,4 +135,18 @@ export class ChatGateway {
             value: valueInEther
         };
     }
+
+    private addUser(user: User) {
+        this.users.set(user.id, user);
+    }
+
+
+    private removeUser(userId: string) {
+        this.users.delete(userId);
+    }
+
+    private findUserById(userId: string): User | undefined {
+        return this.users.get(userId);
+    }
 }
+

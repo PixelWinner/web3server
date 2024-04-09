@@ -5,15 +5,19 @@ export type TMessage = {
     userId: string;
     text: string;
     sender: string;
-    chatId: string
     type: MessageType;
     transactions: Transaction[]
+}
+
+export type User = {
+    id: string,
+    userName: string;
+    chatId: string | null;
 }
 
 export type UserMessage = {
     text: string;
     userName: string;
-    chatId: string
 }
 
 export type JoinData = {
@@ -21,6 +25,8 @@ export type JoinData = {
     userName: string;
     chatId: string;
 }
+
+export type UsersMap = Map<string, User>
 
 export type Chats = Record<string, TMessage[]>
 
