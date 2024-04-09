@@ -118,7 +118,11 @@ export class ChatGateway {
         }
 
         const transactionsInfoPromises = txIds.map(txId => this.getTxInfo(txId));
-        const transactionsInfo = await Promise.all(transactionsInfoPromises);
+        const settledPromises = await Promise.allSettled(transactionsInfoPromises);
+
+        const transactionsInfo: Transaction[] = settledPromises
+            .filter((promise): promise is PromiseFulfilledResult<Transaction> => promise.status === "fulfilled")
+            .map(promise => promise.value);
 
         if (transactionsInfo.length === 0) {
             return [];
