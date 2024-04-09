@@ -79,16 +79,21 @@ export class ChatGateway {
 
         const txIds: string[] = this.extractTxIds(text);
 
-        const transactions = await this.getTxIdsInfo(txIds);
-
         const message: TMessage = {
             id: v4(),
             userId: client.id,
             sender: user.userName,
             type: MessageType.USER,
             text,
-            transactions
+            transactions: []
         };
+
+        try {
+            message.transactions = await this.getTxIdsInfo(txIds);
+        } catch (e) {
+            console.log(e);
+        }
+
 
         if (!this.chats[user.chatId]) {
             this.chats[user.chatId] = [message];
@@ -139,7 +144,6 @@ export class ChatGateway {
     private addUser(user: User) {
         this.users.set(user.id, user);
     }
-
 
     private removeUser(userId: string) {
         this.users.delete(userId);
