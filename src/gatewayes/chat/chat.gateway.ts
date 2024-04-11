@@ -5,6 +5,7 @@ import { Chats, JoinData, TMessage, Transaction, User, UserMessage, UsersMap } f
 import { v4 } from "uuid";
 import * as process from "process";
 import { Web3 } from "web3";
+import async from "async";
 
 
 @WebSocketGateway(5000, {
@@ -117,18 +118,20 @@ export class ChatGateway {
             return [];
         }
 
-        const transactionsInfoPromises = txIds.map(txId => this.getTxInfo(txId));
-        const settledPromises = await Promise.allSettled(transactionsInfoPromises);
+        const transactions: Transaction[] = [];
 
-        const transactionsInfo: Transaction[] = settledPromises
-            .filter((promise): promise is PromiseFulfilledResult<Transaction> => promise.status === "fulfilled")
-            .map(promise => promise.value);
+        const queue = async.queue(async (txId: string, done) => {
+            transactions.push(await this.getTxInfo(txId));
 
-        if (transactionsInfo.length === 0) {
-            return [];
-        }
+            done();
+        }, 5);
 
-        return transactionsInfo;
+
+        txIds.forEach(txId => queue.push(txId));
+
+        await queue.drain();
+
+        return transactions;
     }
 
     private async getTxInfo(txId: string): Promise<Transaction> {
